@@ -269,7 +269,7 @@ class Config:
             'DOJOT_KAFKA_POLL_TIMEOUT', self.kafka["dojot"]["poll_timeout"]))
 
         self.kafka["consumer"]["group_id"] = os.environ.get(
-            'KAFKA_GROUP_ID', self.kafka["consumer"]["group_id"])
+            'KAFKA_GROUP_IDddddd', self.kafka["consumer"]["group_id"])
 
         self.data_broker["url"] = os.environ.get(
             'DATA_BROKER_URL', self.data_broker["url"])

@@ -103,7 +103,7 @@ class Messenger:
         configTenancy.kafka["consumer"]["group_id"] = groupID;
         self.__tenancy_consumer = Consumer(configTenancy, groupID)
         LOGGER.debug("Creating consumer for tenancy messages...")
-        self.create_channel(self.config.dojot['subjects']['tenancy'], "r", True)
+        self.create_channel2(self.config.dojot['subjects']['tenancy'], "r", True)
         LOGGER.debug("... consumer for tenancy messages was successfully created.")
 
         self.consumer = Consumer(self.config, self.name)
@@ -168,7 +168,8 @@ class Messenger:
             #if sub != self.config.dojot['subjects']['tenancy'] and data['tenant']!=self.config.dojot['management']["tenant"] :
             self.__bootstrap_tenants(sub, data['tenant'], self.subjects[sub]['mode'])
         
-        self.__bootstrap_tenants2()
+        if tenant == self.config.dojot['management']["tenant"]:
+            self.__bootstrap_tenants2()
 
         self.emit(self.config.dojot['subjects']['tenancy'],
                   self.config.dojot['management']["tenant"], "new-tenant", data['tenant'])
@@ -260,6 +261,45 @@ class Messenger:
             #if subject != self.config.dojot['subjects']['tenancy'] and subject!=self.config.dojot['management']["tenant"] :
             self.__bootstrap_tenants(subject, subject, mode, is_global)
         
+        # if subject == self.config.dojot['subjects']['tenancy']:
+        #     self.__bootstrap_tenants2()
+
+    def create_channel2(self, subject, mode="r", is_global=False):
+        """
+        Creates a new channel tha is related to tenants, subjects, and kafka
+        topics.
+
+        :type subject: str
+        :param subject: The subject associated to this channel.
+
+        :type mode: str
+        :param mode: Channel type ("r" for only receiving messages, "w" for
+            only sending messages, "rw" for receiving and sending messages)
+
+        :type is_global: bool
+        :param is_global: flag indicating whether this channel should be
+            associated to a service or be global.
+        """
+
+        LOGGER.info("Creating channel for subject: %s", subject)
+
+        associated_tenants = []
+
+        if is_global is True:
+            associated_tenants = [self.config.dojot['management']["tenant"]]
+            self.global_subjects[subject] = dict()
+            self.global_subjects[subject]['mode'] = mode
+        else:
+            associated_tenants = self.tenants
+            self.subjects[subject] = dict()
+            self.subjects[subject]['mode'] = mode
+
+        LOGGER.debug("tenants in create channel: %s", self.tenants)
+        # for tenant in associated_tenants:
+        #     #if subject != self.config.dojot['subjects']['tenancy'] and subject!=self.config.dojot['management']["tenant"] :
+        #     self.__bootstrap_tenants(subject, subject, mode, is_global)
+        
+        # if subject == self.config.dojot['subjects']['tenancy']:
         self.__bootstrap_tenants2()
 
     def __bootstrap_tenants(self, subject, tenant, mode, is_global=False):
@@ -353,18 +393,18 @@ class Messenger:
             LOGGER.info("A7 Got topic for subject %s and tenant %s: %s", subject, tenant, ret_topic)
             self.topics[ret_topic] = {"tenant": tenant, "subject": subject}
 
-            if "r" in mode:
-                LOGGER.info("A8 Telling consumer to subscribe to new topic")
-                self.__tenancy_consumer.subscribe(ret_topic, self.__process_kafka_messages)
-                if len(self.consumer.topics) == 1:
-                    LOGGER.info("A9 Starting consumer thread...")
-                    try:
-                        self.consumer.start()
-                    except RuntimeError as error:
-                        LOGGER.info("A10 Something went wrong while starting thread: %s", error)
-                    LOGGER.info("A11 ... consumer thread was successfully started.")
-                else:
-                    LOGGER.debug("A12 Consumer thread is already started")
+            #if "r" in mode:
+            LOGGER.info("A8 Telling consumer to subscribe to new topic")
+            self.__tenancy_consumer.subscribe(ret_topic, self.__process_kafka_messages)
+            if len(self.consumer.topics) == 1:
+                LOGGER.info("A9 Starting consumer thread...")
+                try:
+                    self.consumer.start()
+                except RuntimeError as error:
+                    LOGGER.info("A10 Something went wrong while starting thread: %s", error)
+                LOGGER.info("A11 ... consumer thread was successfully started.")
+            else:
+                LOGGER.debug("A12 Consumer thread is already started")
 
             # if "w" in mode:
             #     LOGGER.info("Adding a producer topic.")
