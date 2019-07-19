@@ -6,6 +6,7 @@ import time
 import json
 import uuid
 import requests
+import copy        
 from .kafka import Producer
 from .kafka import TopicManager
 from .kafka import Consumer
@@ -97,12 +98,14 @@ class Messenger:
         # topics
         # These consumer MUST belong to a unique group because all consumer
         # SHOULD receive messages related to tenants.
-        self.consumer = Consumer(self.config, "dojot-module-"+ str(uuid.uuid4()))
+        groupID = "dojot-module-"+ str(uuid.uuid4())
+        configTenancy = copy.deepcopy(self.config)
+        configTenancy.kafka["consumer"]["group_id"] = groupID;
+        self.__tenancy_consumer = Consumer(self.config, groupID)
         LOGGER.debug("Creating consumer for tenancy messages...")
         self.create_channel(self.config.dojot['subjects']['tenancy'], "r", True)
         LOGGER.debug("... consumer for tenancy messages was successfully created.")
 
-        self.__tenancy_consumer = self.consumer
         self.consumer = Consumer(self.config, self.name)
 
         self.on(self.config.dojot['subjects']['tenancy'], "message", self.process_new_tenant)
@@ -162,7 +165,11 @@ class Messenger:
 
         self.tenants.append(data['tenant'])
         for sub in self.subjects:
+            #if sub != self.config.dojot['subjects']['tenancy'] and data['tenant']!=self.config.dojot['management']["tenant"] :
             self.__bootstrap_tenants(sub, data['tenant'], self.subjects[sub]['mode'])
+        
+        self.__bootstrap_tenants2()
+
         self.emit(self.config.dojot['subjects']['tenancy'],
                   self.config.dojot['management']["tenant"], "new-tenant", data['tenant'])
 
@@ -250,7 +257,10 @@ class Messenger:
 
         LOGGER.debug("tenants in create channel: %s", self.tenants)
         for tenant in associated_tenants:
-            self.__bootstrap_tenants(subject, tenant, mode, is_global)
+            #if subject != self.config.dojot['subjects']['tenancy'] and subject!=self.config.dojot['management']["tenant"] :
+            self.__bootstrap_tenants(subject, subject, mode, is_global)
+        
+        self.__bootstrap_tenants2()
 
     def __bootstrap_tenants(self, subject, tenant, mode, is_global=False):
         """
@@ -303,6 +313,64 @@ class Messenger:
                 if subject not in self.producer_topics:
                     self.producer_topics[subject] = dict()
                 self.producer_topics[subject][tenant] = ret_topic
+        except Exception as error:
+            LOGGER.warning("Could not get topic: %s", error)
+
+    def __bootstrap_tenants2(self):
+        """
+        Given a tenant, bootstrap it to all subjects registered.
+
+        :type subject: str
+        :param subject: The subject being bootstrapped
+        :type tenant: str
+        :param tenant: the tenant being bootstrapped
+        :type mode: str
+        :param mode: R/W channel mode (send only, receive only or both)
+        :type is_global: bool
+        :param is_global: flag indicating whether this channel should be
+            associated to a service or be global.
+        """
+        mode = "r"
+        tenant = self.config.dojot['management']["tenant"]
+        subject  = self.config.dojot['subjects']['tenancy'] 
+
+        LOGGER.info("A1  Bootstraping tenant %s for subject %s", tenant, subject)
+        LOGGER.debug("A2 Global: %s, mode: %s", True, mode)
+
+        LOGGER.info("A3 Requesting topic for %s@%s", subject, tenant)
+
+
+        try:
+            ret_topic = self.topic_manager.get_topic(tenant, subject, True)
+            if ret_topic is None:
+                LOGGER.warning("A4 Could not bootstrap tenant %s. Bailing out.", tenant)
+                return
+            LOGGER.info("A5 Got topics: %s", (json.dumps(ret_topic)))
+            if ret_topic in self.topics:
+                LOGGER.info("A6 Already have a topic for %s@%s", subject, tenant)
+                return
+
+            LOGGER.info("A7 Got topic for subject %s and tenant %s: %s", subject, tenant, ret_topic)
+            self.topics[ret_topic] = {"tenant": tenant, "subject": subject}
+
+            if "r" in mode:
+                LOGGER.info("A8 Telling consumer to subscribe to new topic")
+                self.__tenancy_consumer.subscribe(ret_topic, self.__process_kafka_messages)
+                if len(self.consumer.topics) == 1:
+                    LOGGER.info("A9 Starting consumer thread...")
+                    try:
+                        self.consumer.start()
+                    except RuntimeError as error:
+                        LOGGER.info("A10 Something went wrong while starting thread: %s", error)
+                    LOGGER.info("A11 ... consumer thread was successfully started.")
+                else:
+                    LOGGER.debug("A12 Consumer thread is already started")
+
+            # if "w" in mode:
+            #     LOGGER.info("Adding a producer topic.")
+            #     if subject not in self.producer_topics:
+            #         self.producer_topics[subject] = dict()
+            #     self.producer_topics[subject][tenant] = ret_topic
         except Exception as error:
             LOGGER.warning("Could not get topic: %s", error)
 
