@@ -98,11 +98,11 @@ class Messenger:
         # topics
         # These consumer MUST belong to a unique group because all consumer
         # SHOULD receive messages related to tenants.
+        LOGGER.debug("Creating consumer for tenancy messages...")
         groupID = "dojot-module-"+ str(uuid.uuid4())
         configTenancy = copy.deepcopy(self.config)
         configTenancy.kafka["consumer"]["group_id"] = groupID;
         self.__tenancy_consumer = Consumer(configTenancy, groupID)
-        LOGGER.debug("Creating consumer for tenancy messages...")
         self.create_channel2(self.config.dojot['subjects']['tenancy'], "r", True)
         LOGGER.debug("... consumer for tenancy messages was successfully created.")
 
@@ -168,8 +168,8 @@ class Messenger:
             #if sub != self.config.dojot['subjects']['tenancy'] and data['tenant']!=self.config.dojot['management']["tenant"] :
             self.__bootstrap_tenants(sub, data['tenant'], self.subjects[sub]['mode'])
         
-        if tenant == self.config.dojot['management']["tenant"]:
-            self.__bootstrap_tenants2()
+        #if tenant == self.config.dojot['management']["tenant"]:
+        #    self.__bootstrap_tenants2()
 
         self.emit(self.config.dojot['subjects']['tenancy'],
                   self.config.dojot['management']["tenant"], "new-tenant", data['tenant'])
