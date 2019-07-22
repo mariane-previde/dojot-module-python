@@ -103,12 +103,13 @@ class Messenger:
         configTenancy = copy.deepcopy(self.config)
         configTenancy.kafka["consumer"]["group_id"] = groupID;
         self.__tenancy_consumer = Consumer(configTenancy, groupID)
-        self.create_channel2(self.config.dojot['subjects']['tenancy'], "r", True)
+        #self.create_channel2(self.config.dojot['subjects']['tenancy'], "r", True)
+        self._initTenancyConsumer()
         LOGGER.debug("... consumer for tenancy messages was successfully created.")
 
         self.consumer = Consumer(self.config, self.name)
 
-        self.on(self.config.dojot['subjects']['tenancy'], "message", self.process_new_tenant)
+        
         ret_tenants = self.auth.get_tenants()
         if ret_tenants is None:
             LOGGER.error("Cannot initialize messenger, as the list of tenants could not be retrieved.")
@@ -264,43 +265,43 @@ class Messenger:
         # if subject == self.config.dojot['subjects']['tenancy']:
         #     self.__bootstrap_tenants2()
 
-    def create_channel2(self, subject, mode="r", is_global=False):
-        """
-        Creates a new channel tha is related to tenants, subjects, and kafka
-        topics.
+    # def create_channel2(self, subject, mode="r", is_global=False):
+    #     """
+    #     Creates a new channel tha is related to tenants, subjects, and kafka
+    #     topics.
 
-        :type subject: str
-        :param subject: The subject associated to this channel.
+    #     :type subject: str
+    #     :param subject: The subject associated to this channel.
 
-        :type mode: str
-        :param mode: Channel type ("r" for only receiving messages, "w" for
-            only sending messages, "rw" for receiving and sending messages)
+    #     :type mode: str
+    #     :param mode: Channel type ("r" for only receiving messages, "w" for
+    #         only sending messages, "rw" for receiving and sending messages)
 
-        :type is_global: bool
-        :param is_global: flag indicating whether this channel should be
-            associated to a service or be global.
-        """
+    #     :type is_global: bool
+    #     :param is_global: flag indicating whether this channel should be
+    #         associated to a service or be global.
+    #     """
 
-        LOGGER.info("Creating channel for subject: %s", subject)
+    #     LOGGER.info("Creating channel for subject: %s", subject)
 
-        associated_tenants = []
+    #     associated_tenants = []
 
-        if is_global is True:
-            associated_tenants = [self.config.dojot['management']["tenant"]]
-            self.global_subjects[subject] = dict()
-            self.global_subjects[subject]['mode'] = mode
-        else:
-            associated_tenants = self.tenants
-            self.subjects[subject] = dict()
-            self.subjects[subject]['mode'] = mode
+    #     if is_global is True:
+    #         associated_tenants = [self.config.dojot['management']["tenant"]]
+    #         self.global_subjects[subject] = dict()
+    #         self.global_subjects[subject]['mode'] = mode
+    #     else:
+    #         associated_tenants = self.tenants
+    #         self.subjects[subject] = dict()
+    #         self.subjects[subject]['mode'] = mode
 
-        LOGGER.debug("tenants in create channel: %s", self.tenants)
-        # for tenant in associated_tenants:
-        #     #if subject != self.config.dojot['subjects']['tenancy'] and subject!=self.config.dojot['management']["tenant"] :
-        #     self.__bootstrap_tenants(subject, subject, mode, is_global)
+    #     LOGGER.debug("tenants in create channel: %s", self.tenants)
+    #     # for tenant in associated_tenants:
+    #     #     #if subject != self.config.dojot['subjects']['tenancy'] and subject!=self.config.dojot['management']["tenant"] :
+    #     #     self.__bootstrap_tenants(subject, subject, mode, is_global)
         
-        # if subject == self.config.dojot['subjects']['tenancy']:
-        self.__bootstrap_tenants2()
+    #     # if subject == self.config.dojot['subjects']['tenancy']:
+    #     self.__bootstrap_tenants2()
 
     def __bootstrap_tenants(self, subject, tenant, mode, is_global=False):
         """
@@ -356,24 +357,15 @@ class Messenger:
         except Exception as error:
             LOGGER.warning("Could not get topic: %s", error)
 
-    def __bootstrap_tenants2(self):
+    def _initTenancyConsumer(self):
         """
-        Given a tenant, bootstrap it to all subjects registered.
-
-        :type subject: str
-        :param subject: The subject being bootstrapped
-        :type tenant: str
-        :param tenant: the tenant being bootstrapped
-        :type mode: str
-        :param mode: R/W channel mode (send only, receive only or both)
-        :type is_global: bool
-        :param is_global: flag indicating whether this channel should be
-            associated to a service or be global.
+            TO DO
         """
         mode = "r"
         tenant = self.config.dojot['management']["tenant"]
         subject  = self.config.dojot['subjects']['tenancy'] 
 
+        LOGGER.info("A0 Initializing tenancy consumer...")
         LOGGER.info("A1  Bootstraping tenant %s for subject %s", tenant, subject)
         LOGGER.debug("A2 Global: %s, mode: %s", True, mode)
 
@@ -399,18 +391,13 @@ class Messenger:
             if len(self.consumer.topics) == 1:
                 LOGGER.info("A9 Starting consumer thread...")
                 try:
-                    self.consumer.start()
+                    self.__tenancy_consumer.start()
+                    self.on(self.config.dojot['subjects']['tenancy'], "message", self.process_new_tenant)
                 except RuntimeError as error:
                     LOGGER.info("A10 Something went wrong while starting thread: %s", error)
                 LOGGER.info("A11 ... consumer thread was successfully started.")
             else:
                 LOGGER.debug("A12 Consumer thread is already started")
-
-            # if "w" in mode:
-            #     LOGGER.info("Adding a producer topic.")
-            #     if subject not in self.producer_topics:
-            #         self.producer_topics[subject] = dict()
-            #     self.producer_topics[subject][tenant] = ret_topic
         except Exception as error:
             LOGGER.warning("Could not get topic: %s", error)
 
