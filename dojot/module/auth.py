@@ -100,19 +100,19 @@ class Auth:
                 url, token, retry_counter, timeout_sleep)
             if payload is None:
                 return None  # because Python, that's because.
-            else:
-                tenants = []
-                for tenant in payload:
-                    tenants.append(tenant['realm'])
 
-                try:
-                    tenants.remove(self.config.keycloak["ignore_realm"])
-                except Exception as e:
-                    LOGGER.error('Unable to remove ignore_realm on the list')
-                    LOGGER.error(e)
-                    LOGGER.error(traceback.format_exc())
+            tenants = []
+            for tenant in payload:
+                tenants.append(tenant['realm'])
 
-                return tenants
+            try:
+                tenants.remove(self.config.keycloak["ignore_realm"])
+            except Exception as e:
+                LOGGER.error('Unable to remove ignore_realm on the list')
+                LOGGER.error(e)
+                LOGGER.error(traceback.format_exc())
+
+            return tenants
         except Exception as e:
             LOGGER.error(e)
             LOGGER.error(traceback.format_exc())

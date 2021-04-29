@@ -314,7 +314,7 @@ class Config:
         self.keycloak["credentials"]["password"] = os.environ.get(
             "KEYCLOAK_PASSWORD", self.keycloak["credentials"]["password"])
         self.keycloak["credentials"]["client_id"] = os.environ.get(
-            "KEYCLOAK_CLIENT_ID", self.keycloak["credentials"]["client_id"])  # TODO check readme
+            "KEYCLOAK_CLIENT_ID", self.keycloak["credentials"]["client_id"])
 
         self.dojot["management"]["user"] = os.environ.get(
             'DOJOT_MANAGEMENT_USER', self.dojot["management"]["user"])

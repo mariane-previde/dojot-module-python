@@ -12,7 +12,6 @@ def test_get_management_token_ok():
         keycloak={
             "base_path": "http://kc_base_path/",
             "ignore_realm": "master",
-            "ignore_realm": "master",
             "credentials": {
                 "username": "admin",
                 "password": "admin",
