@@ -1,0 +1,56 @@
+name: Dojot-module-python
+
+# Triggered after a branch is created, a tag or a branch is pushed or a PR
+on:
+  create:
+  push:
+  pull_request:
+
+jobs:
+
+  python-tests:
+    name: Python Tests
+    if: contains(github.event.head_commit.message, 'ci skip') == false # if the commit message has ci skip, doesn't run anything because needs
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python-version: [3.6.x]
+
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+
+    - name: Use Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: pip install requirements
+      run: |
+        pip install -e .[dev]
+        pip install codecov
+
+    - name: python test
+      env:
+        KAFKA_HOSTS: "localhost:9092"
+        KAFKA_GROUP_ID: "sample-travis"
+        LOCALHOST_MOCK: "http://localhost:5002"
+        DATA_BROKER_URL: ${LOCALHOST_MOCK}
+        AUTH_URL: ${LOCALHOST_MOCK}
+        DEVICE_MANAGER_URL: ${LOCALHOST_MOCK}
+        PYTHONPATH: $(pwd)
+      run: |
+        docker network create kafkanet
+        docker run -d --network kafkanet --publish 2181:2181 --name zookeeper zookeeper:3.4
+        docker run -d --name kafka --network kafkanet --publish 9092:9092 --publish 7203:7203 --env ZOOKEEPER_IP=zookeeper --env JAVA_OPTS="-Xms256m -Xmx512" --env KAFKA_ADVERTISED_HOST_NAME=127.0.0.1 ches/kafka
+        sleep 10
+        python3 ./tests/dojot_monitor.py &
+        pytest --cov=./dojot --cov-report=html
+        coverage run -m pytest tests && coverage xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: coverage.xml
+        flags: Dojot-module-python
+        name: dojot-module-python
