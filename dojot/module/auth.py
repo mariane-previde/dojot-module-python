@@ -8,7 +8,7 @@ import requests
 import time
 from .logger import Log
 from .http_requester import HttpRequester
-
+import traceback
 
 LOGGER = Log().color_log()
 
@@ -34,6 +34,7 @@ class Auth:
         :rtype: str
         :return: The token
         """
+        LOGGER.debug('getting token from keycloak')
 
         url = self.config.keycloak['base_path'] + \
             'realms/master/protocol/openid-connect/token'
@@ -43,12 +44,11 @@ class Auth:
         try:
             payload = requests.post(url, data=form_params)
             token = payload.json()['access_token']
-        except Exception:
-            raise
-        else:
             LOGGER.debug('token succefully generated')
-
-        return token
+            return token
+        except Exception as e:
+            LOGGER.error(e)
+            LOGGER.error(traceback.format_exc())
 
     def get_access_token(self, tenant):
         """
@@ -81,22 +81,38 @@ class Auth:
         :rtype: list or None
         :return: List of tenants
         """
+        LOGGER.debug('getting tenants...')
 
         url = self.config.keycloak["base_path"] + 'admin/realms'
         retry_counter = self.config.keycloak["connection_retries"]
         timeout_sleep = self.config.keycloak["timeout_sleep"]
+
         try:
             token = self.get_management_token()
-        except Exception:
-            LOGGER.debug('Unable generate token')
-            return None
+        except Exception as e:
+            LOGGER.error('Unable generate token')
+            LOGGER.error(e)
+            LOGGER.error(traceback.format_exc())
 
-        payload = HttpRequester.do_it(
-            url, token, retry_counter, timeout_sleep)
-        if payload is None:
-            return None  # because Python, that's because.
-        else:
-            tenants = []
-            for tenant in payload:
-                tenants.append(tenant['realm'])
-            return tenants
+        try:
+            payload = HttpRequester.do_it(
+                url, token, retry_counter, timeout_sleep)
+            if payload is None:
+                return None  # because Python, that's because.
+            else:
+                tenants = []
+                for tenant in payload:
+                    tenants.append(tenant['realm'])
+
+                try:
+                    tenants.remove(self.config.keycloak["ignore_realm"])
+                except Exception as e:
+                    LOGGER.error('Unable to remove ignore_realm on the list')
+                    LOGGER.error(e)
+                    LOGGER.error(traceback.format_exc())
+
+                return tenants
+        except Exception as e:
+            LOGGER.error(e)
+            LOGGER.error(traceback.format_exc())
+            return None
