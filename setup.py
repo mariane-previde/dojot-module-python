@@ -12,13 +12,13 @@ with io.open('README.md', 'rt', encoding='utf8') as f:
 
 setup(
     name='dojot.module',
-    version='0.0.1a5',
+    version='0.1.0',
     url='http://github.com/dojot/dojot-module-python',
     project_urls=OrderedDict((
         ('Code', 'https://github.com/dojot/dojot-module-python.git'),
         ('Issue tracker', 'https://github.com/dojot/dojot-module-python/issues'),
     )),
-    license='GPL-3.0',
+    license='Apache-2.0',
     author='Matheus Campanha Ferreira',
     author_email='campanha@cpqd.com.br',
     maintainer='dojot team',
@@ -30,7 +30,7 @@ setup(
     platforms=[any],
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
     install_requires=[
