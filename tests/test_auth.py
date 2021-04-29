@@ -11,6 +11,8 @@ def test_get_management_token_ok():
     config = Mock(
         keycloak={
             "base_path": "http://kc_base_path/",
+            "ignore_realm": "master",
+            "ignore_realm": "master",
             "credentials": {
                 "username": "admin",
                 "password": "admin",
@@ -40,6 +42,7 @@ def test_get_management_token_fail():
     config = Mock(
         keycloak={
             "base_path": "http://kc_base_path/",
+            "ignore_realm": "master",
             "credentials": {
                 "username": "admin",
                 "password": "admin",
@@ -78,6 +81,7 @@ def test_get_tenants():
             "timeout_sleep": 1,
             "connection_retries": 3,
             "base_path": "http://kc_base_path/",
+            "ignore_realm": "master",
             "credentials": {
                 "username": "admin",
                 "password": "admin",
@@ -97,14 +101,14 @@ def test_get_tenants():
         config=config
     )
 
-    master_tenant = '[{"realm": "master"}]'
+    master_tenant = '[{"realm": "master"}, {"realm": "admin"}]'
     patch_http_perform = patch(
         "dojot.module.HttpRequester.do_it", return_value=json.loads(master_tenant))
     with patch_http_perform as mock_http_perform:
         tenants = Auth.get_tenants(mock_self)
         mock_http_perform.assert_called_with(
             "http://kc_base_path/admin/realms", "123", 3, 1)
-        assert tenants[0] == "master"
+        assert tenants[0] == "admin"
     patch_http_perform = patch(
         "dojot.module.HttpRequester.do_it", return_value=None)
     with patch_http_perform as mock_http_perform:
@@ -121,6 +125,7 @@ def test_get_tenants_fail():
             "connection_retries": 3,
             "base_path": "http://kc_base_path/",
             "tenants_endpoint": "keycloak_tenants_endpoint/",
+            "ignore_realm": "master",
             "credentials": {
                 "username": "admin",
                 "password": "admin",

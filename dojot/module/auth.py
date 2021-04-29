@@ -49,6 +49,7 @@ class Auth:
         except Exception as e:
             LOGGER.error(e)
             LOGGER.error(traceback.format_exc())
+            raise
 
     def get_access_token(self, tenant):
         """
