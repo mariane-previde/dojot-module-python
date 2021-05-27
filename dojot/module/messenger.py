@@ -101,6 +101,7 @@ class Messenger:
         groupID = "dojot-module-python-"+ str(uuid.uuid4())
         configTenancy = copy.deepcopy(self.config)
         configTenancy.kafka["consumer"]["group_id"] = groupID
+        configTenancy.kafka["consumer"]["auto_offset_reset"] = "auto_offset_reset"
         self.consumer = Consumer(configTenancy, groupID)
         LOGGER.debug("Creating consumer for tenancy messages...")
         self.create_channel(self.config.dojot['subjects']['tenancy'], "r", True)
